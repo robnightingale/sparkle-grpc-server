@@ -1,0 +1,1391 @@
+syntax = "proto3";
+
+package smart;
+
+option java_package = "com.lchclearnet.swapclear.smart.types";
+option java_multiple_files = true;
+option java_outer_classname = "SmartTypes";
+option java_generic_services = false;
+option java_generate_equals_and_hash = true;
+
+// SimulationSet identifies the set of participants that should be included in
+// a margin calculation. The set must be a subset of available trades,
+// sensitivities and accounts in the session. A least one of account, trade id
+// list or sensitivity list must be provided.
+// <p>
+// If the margin calculation is being performed for a client
+// account then isClient boolean value must be set to true
+// so that the correct scaling factor is applied to the margin results
+// <p>
+// There are three other  parameters that can be set -
+// currency, index and scenario number. These enable detailed
+// tenor level breakdown to be returned for the specified scenario
+message SimulationSet {
+	// Account name - H for house or client account name
+	// This is an  parameter; if supplied
+	// relevant base sensitivity profile data must be
+	// available else an exception will be thrown
+	 Account account = 1;
+
+	// List of trade ids specifying the trades
+	// that should be included in the simulation. The
+	// specified trades must have been previously added
+	// to the session.
+	repeated TradeId trade_id = 2;
+
+	// List of sensitivity profile ids specifying the
+	// input sensitivities that should be included in the
+	// simulation. The specified sensitivities must have been
+	// previously added to the session.
+	repeated SensitivityProfileId sensitivity_profile_id = 3;
+
+	// Optional parameter for obtaining detailed breakdown of
+	// IM by scenario. Specifies the currency for which detailed
+	// breakdown is required
+	 string currency = 4;
+
+	//  parameter for obtaining detailed breakdown of
+	// IM by scenario. Specifies the index for which detailed
+	// breakdown is required
+	 string index = 5;
+
+	//  parameter for obtaining detailed breakdown of
+	// IM by scenario. Specified the scenario number (1-1250) for
+	// which detailed breakdown is required; if this is
+	// set to -1, then all scenarios will be returned
+	 int32 scenario_number = 6;
+
+	//  parameter to specify that the margin results must
+	// be scaled appropriately for a client account. If not
+	// specified, the default value is false
+	 bool is_client = 7;
+
+	//  IM method
+	 string im_method = 8;
+
+	// Instruction to provide full margin breakdown
+	// This will result in a large set of data being
+	// returned
+	 bool request_full_margin_breakdown = 9;
+
+	//  name for this set
+	// Just for information purposes
+	 string name = 10;
+
+	//Request for basis risk breakdown
+	 bool request_basis_risk_breakdown = 11;
+
+	// List of position ids specifying the listed positions
+	// that should be included in the simulation. The
+	// specified positions must have been previously added
+	// to the session.
+	repeated PositionId position_id = 12;
+
+	//specify the margin class for which the calculation
+	//is being carried out. Possible values are OTC
+	//Listed and PortfolioMargined
+	//if unspecified it is defaulted to OTC
+	 MarginClassType requested_margin_class = 13;
+
+	// Instruction to include offset positions when
+	// carrying out the initial margin calculation
+	// for a Listed Portfolio. The default value
+	// if unspecified is 'true'
+	// This field doesn't apply for an OTC Portfolio
+	 bool include_offset_positions = 14;
+
+	// Account details for the same member in the
+	//other clearing system. If the details are supplied
+	//this will be used for calculating the add-ons
+	//if the details are not supplied then it would
+	//be assumed that this party is standalone
+
+	// Instruction to exclude future sensitivities when
+	// carrying out the initial margin calculation
+	// for an OTC Portfolio.
+	// This field doesn't apply for a Listed Portfolio
+	 bool exclude_future_sensitivities = 16;
+
+
+}
+
+// The Margin Class type
+enum MarginClassType {
+	// represents OTC class i.e. SwapCleart
+	OTC = 0;
+	// represents listed only member
+	LISTED = 1;
+}
+
+// The Margin Addon type - different types of addons
+enum MarginAddonType {
+	// The IMM multipler based on concentrated risks
+	// at the portfolio level
+	IMM1 = 0;
+	// represents First Principle methodology of SwapClear (IMMFP)
+	//will be applied to all OTC positions, and portfolio margin-eligible
+	//futures positions across both Margin Classes
+	//irrespective of ROXY membership
+	IMMFP_OUTRIGHT = 1;
+	// represents basis component of IMMFP for Listed products that are eligible for
+	// portfolio margining. This will be applied to all positions held on portfolio
+	// margin-able listed products irrespective of Margin Class, and result in £FPBasis
+	IMMFP_BASIS = 2;
+	// represents the futures methodology of Liquidity/Concentration Risk Multiplier (LCRM)
+	// It will be applied to positions against Listed products that are in-eligible
+	// for portfolio margining
+	FUTURE_LCRM = 3;
+	// the sum of £FPOutright, £LCRM and £FPBasis
+	IMM2 = 4;
+	// The total liquidity/concentration margin will be the higher amount between
+	// i) £IMM1 and
+	//  ii) the sum of £FPOutright, £LCRM and £FPBasis = £IMM2
+	TOTAL_IMM = 5;
+	// represents the SwapClear Basis Risk add-on - calculated against the total portfolio
+	BASIS_RISK = 6;
+	// represents the SwapClear Unscaled VAR add-on - calculated against the total portfolio
+	UNSCALED_VAR = 7;
+	// represents add-on that reduces the portfolio margining benefits of offsetting
+	// futures risk against the minor SwapClear currencies. The charge will be a percentage
+	// of the savings in base initial margin
+	DIVERSIFICATION = 8;
+	// represents the add-on that will
+	// be applicable to margin savings due to Portfolio Balancing.
+	// The charge will be a
+	// percentage of the savings in base initial margin
+	PORTFOLIO_MARGIN = 9;
+}
+
+// Account name - such as H for house account
+// or client account name as specified in report 102c
+// field ClientAccountid
+message Account {
+	// account name
+	 string name = 1;
+}
+
+// Container for results obtained from an IM
+// estimation
+message SmartResultSet {
+    // Party code
+     string party_code = 1;
+
+    // Account name for which the base portfolio (report 102/102c)
+    // was included - if null no base portfolio
+     Account account = 2;
+
+    // Margin estimate results (summary)
+     MarginEstimate margin_estimate = 3;
+
+    // The sensitivity profile for the combined portfolio
+    // including all participants
+     SensitivityProfile im_sensitivity_profile = 4;
+
+    // The sensitivity profile of the account (if specified)
+    // in the simulation set - this is the data from reports
+    // 102 or 102c
+     SensitivityProfile account_sensitivity_profile = 5;
+
+    // The overall sensitivity of all input simulation
+    // trades if provided
+     SensitivityProfile trades_sensitivity_profile = 6;
+
+    // IM estimation details for a single scenario
+    // this is populated if the SimulationSet included
+    // a specific scenario
+     MarginScenarioDetail margin_scenario_detail = 7;
+
+    // Client mode if set
+     bool is_client = 9;
+
+    // Initial Margin method
+     string im_method = 10;
+
+    // Full IM breakdown
+     MarginBreakdown full_margin_breadown = 11;
+
+    //  message string
+     string message = 12;
+
+    //  name of the simulation set
+     string simulation_set_name = 13;
+
+    // Liquidity breakdown details
+     LiquidityBreakdown liquidity_breakdown = 14;
+
+    // details of the Basis Risk Calculations
+     BasisRiskDetail basis_risk_detail = 15;
+
+	//combined pnL vector (total losses by scenario)
+	 PnlVector pnl_vector = 17;
+
+	//LCRM break down details
+	 LCRMBreakdown lcrm_breakdown = 18;
+
+	//FP Basis break down details
+	 FPBasisBreakdown fp_basis_breakdown = 19;
+
+	// The position profile of the account (if specified)
+    // in the simulation set - this is the data from the
+    // listed position statement report
+     PositionProfile account_position_profile = 20;
+
+	// The position profile of the simulated positions
+    //  (if any) specified in the simulation set
+     PositionProfile simulated_position_profile = 21;
+
+    // Portfolio Margin addon breakdown details
+     PortfolioMarginAddonBreakdown portfolio_margin_addon_breakdown = 22;
+
+    // Diversification addon breakdown details
+     DiversificationAddonBreakdown diversification_addon_breakdown = 23;
+
+}
+
+//Basis Risk detail information
+message BasisRiskDetail {
+
+    // basis risk add-on value. calculated from
+    // the constituent approaches i.e. OIS, TENOR and STRESS
+    // in reporting currency
+     double basis_risk_add_on = 1;
+
+    // Currency/Curve breakdown of all the approaches
+    repeated BasisRiskBreakdown basis_risk_breakdown = 2;
+
+}
+
+// Basis Risk breakdown
+message BasisRiskBreakdown {
+    // Basis Risk Approach (STRESS, TENOR, OIS)
+     string basis_risk_approach = 1;
+
+    // total exposure for the given approach
+    //in reporting currency
+     double approach_exposure = 2;
+
+    // The worst scenarios that contributed to the
+    // exposure for this approach
+    repeated int32 exposure_scenario = 3;
+
+    // The incremental charge due to this approach
+    // according to the basis risk adjustment rules
+    // in the reporting currency
+     double basis_adjustment_charge = 4;
+
+    // exposure breakdown for this approach
+    // by Currency/Curve
+    repeated MarginDetail approach_detail = 5;
+
+	// exposure details by a pillar point for a given
+	// scenario, currency and index for this approach
+    repeated MarginScenarioDetail approach_scenario_detail = 6;
+}
+
+//breakdown of portfolio margin addon details
+message  PortfolioMarginAddonBreakdown {
+	//pre-balanced otc initial margin
+	 double pre_balanced_otc_initial_margin = 1;
+	//pre-balanced listed initial margin
+	 double pre_balanced_listed_initial_margin = 2;
+	//post balanced otc initial margin
+	 double post_balanced_otc_initial_margin = 3;
+	//post balanced listed initial margin
+	 double post_balanced_listed_initial_margin = 4;
+	//balancer benefit as a ratio against original total margin
+	 double balanced_benefit_ratio = 5;
+	//margin buffer for the benefit
+	 double margin_buffer = 6;
+	//addon value
+	 double addon_value = 7;
+}
+
+//breakdown of diversification add-on details
+message  DiversificationAddonBreakdown {
+	//addon percent
+	 double addon_percent = 1;
+	//addon value
+	 double addon_value = 2;
+    // base initial margin estimate in reporting currency
+    // for the futures only portfolio
+     double future_initial_margin = 3;
+    // The scenarios chosen for IM for the futures only
+    repeated int32 future_initial_margin_scenario = 4;
+    // base initial margin estimate in reporting currency
+    // for the minor currencies only portfolio
+     double minor_ccy_initial_margin = 5;
+    // The scenarios chosen for IM for the minor ccy only
+    repeated int32 minor_ccy_initial_margin_scenario = 6;
+    // base initial margin estimate in reporting currency
+    // for the combined (futures and minor ccy) portfolio
+     double combined_initial_margin = 7;
+    // The scenarios chosen for IM for the combined
+    repeated int32 combined_initial_margin_scenario = 8;
+
+}
+
+// breakdown of LCRM figures
+message LCRMBreakdown {
+	//add-on value
+	 double lcrm = 1;
+	//lcrm by position
+	repeated LCRMPositionBreakdown position_breakdown = 2;
+	//initial margin used for LCRM calculation
+	//which is the IM of future eligible for LCRM
+	 double lcrm_initial_margin = 3;
+}
+
+// LCRM details by position/instrument
+message LCRMPositionBreakdown {
+
+	//position
+	 ListedPosition listed_position = 1;
+
+	//net delta based notional
+	 double net_delta_based_notional = 2;
+
+	//holding period
+	 double holding_period = 3;
+
+	//im contribution
+	 double im_contribution = 4;
+
+	//lcrm for the position
+	 double lcrm = 5;
+}
+
+// breakdown of LCRM figures
+message FPBasisBreakdown {
+	//add-on value
+	 double fp_basis = 1;
+	//FP Basis by position
+	repeated FPBasisPositionBreakdown position_breakdown = 2;
+}
+
+// FP Basis details by position/instrument
+message FPBasisPositionBreakdown {
+
+	//position
+	 ListedPosition listed_position = 1;
+
+	//basis point cost
+	 double basis_point_cost = 2;
+
+	//fp basis for the position
+	 double fp_basis = 3;
+}
+
+
+// Liquidity details
+message LiquidityBreakdown {
+
+	// Detailed breakdown by currency/index
+    repeated LiquidityIndexBreakdown index_breakdown = 1;
+}
+
+// Liquidity details by index
+message LiquidityIndexBreakdown {
+	// Currency
+     string currency = 1;
+
+	// Index name
+     string index = 2;
+
+    // cost for this currency and index
+     double liquidity_cost_local_ccy = 3;
+
+	// liquidity broken by tenor
+	repeated LiquidityTenorBreakdown liquidity_tenor_breakdown = 4;
+
+	// ultra long add on in local ccy
+	 LiquidityTenorBreakdown ultra_long_add_on = 5;
+
+	// short add on in local ccy
+	repeated LiquidityTenorBreakdown short_add_on = 7;
+
+	// cost for this currency and index in reporting currency
+     double liquidity_cost_reporting_ccy = 6;
+
+}
+
+// Liquidity cost details broken down by tenor
+message LiquidityTenorBreakdown {
+
+	// Tenor bucket
+     string tenor = 1;
+
+	// Zero delta in local currency
+     double zero_delta_local_ccy = 2;
+
+	// Hedge Notional in local currency
+     double hedge_notional_local_ccy = 3;
+
+	// Cost multiplier
+     double cost_multiplier = 4;
+
+	// PAR delta in local currency
+	// if the par delta has in part or whole
+	// has been offset due to OIS-IBOR offsets
+	// then this represents the value post
+	// the offset. The original par delta is
+	// preserved in the original par delta
+     double par_delta_local_ccy = 5;
+
+	// Calculated liquidity cost in local currency
+     double liquidity_cost_local_ccy = 6;
+
+	// original PAR delta in local currency
+     double original_par_delta_local_ccy = 7;
+
+}
+
+// Container for trade valuation results
+message TradeValuation {
+	// The trade id
+	 TradeId trade_id = 1;
+
+	// Currency of the trade
+	 string currency = 2;
+
+	// NPV calculated using VM curves
+	 double vm_npv = 3;
+
+	// NPV calculated using IM curves
+	 double im_npv = 4;
+
+	// Delta Gamma Sensitivity of the trade
+	 SensitivityProfile im_sensitivity = 5;
+
+	// Net delta in reporting currency
+	 double delta_reporting_currency = 6;
+
+	// Net gamma in reporting currency
+	 double gamma_reporting_currency = 7;
+
+	// NPV (VM) in reporting currency
+	 double npv_reporting_currency = 8;
+
+	// Notional in reporting currency
+	 double notional_reporting_currency = 9;
+}
+
+// The Cashflow type
+enum CashflowType {
+	// No cashflow
+	CF_NONE = 0;
+	// Fixed rate / amount cashflow
+	CF_FIXED = 1;
+	// Floating cashflow
+	CF_FLOAT = 2;
+	// FRA cashflow
+	CF_FRA = 3;
+}
+
+// Interest rate observation used in the
+// valuation
+message RateObservation {
+	// Adjusted fixing date (valuedate - fixinglag)
+	 Date adjusted_fixing_date = 1;
+	// Adjusted value date
+	 Date adjusted_value_date = 2;
+	// Adjusted maturity date (valuedate + tenor)
+	 Date adjusted_maturity_date = 3;
+	// Interest rate for value date to maturity date as
+	// fixed on fixing date
+	 double observed_rate = 4;
+	//  weight if participating in interpolation
+	 double weight = 5;
+	// True if this is a real fixing else false in
+	// which case it is a forecast / forward rate
+	 bool is_real = 6;
+	// The tenor used to calculate maturity date
+	 string tenor = 7;
+}
+
+// An accrual period
+message CalculationPeriod {
+	// Notional amount that applies to the period
+	 double notional = 1;
+	// Fixed rate that applies to the period (fixed rate periods only)
+	 double fixed_rate = 2;
+	// spread that applies to the period (floating periods only)
+	 double spread = 3;
+	// Period start date (unadjusted)
+	 Date unadjusted_start_date = 4;
+	// Period start date (adjusted)
+	 Date adjusted_start_date = 5;
+	// Period end date (unadjusted)
+	 Date unadjusted_end_date = 6;
+	// Period end date (adjusted)
+	 Date adjusted_end_date = 7;
+	// Calculated or effective rate for the period
+	 double calculated_rate = 8;
+	// True if the calculated rate was interpolated between
+	// two tenors
+	 bool is_interpolated = 9;
+	// For a OIS coupon that overlaps between real fixings
+	// and a forward rate, this is the start of the forward period
+	 Date ois_forward_start_date = 11;
+	// For OIS swaps only - if the coupon has accrued interest
+	// due to real fixings
+	 double ois_accrued_interest = 12;
+	// For OIS swaps only - the year fraction of the forward
+	// portion of a coupon that overlaps
+	 double ois_forward_year_fraction = 13;
+	// Observed rates (1 or 2) for floating cashflows only
+	repeated RateObservation observed_rates = 14;
+	// The fixing date that applies to the OIS forward portion
+	 Date ois_forward_fixing_date = 15;
+	// The calculation period year fraction as per the day
+	// count fraction
+	 double year_fraction = 16;
+}
+
+// A payment period - for noncompounded swaps, each
+// payment period will have exactly one calculation period.
+// For compounded swaps the payment period will have more than
+// one calculation period
+// Note that OIS floating legs are treated as noncompunded
+// legs as the index itself is compounding
+message PaymentCalculationPeriod {
+	// Payment date (adjusted)
+	 Date adjusted_paymentDate = 1;
+	// Discount factor that applied to the period
+	 double discount_factor = 3;
+	// The net present value of the period
+	 double present_amount_value = 4;
+	// The original payment amount prior to discounting
+	 double amount = 5;
+	// The calculation periods that are part of the payment period
+	repeated CalculationPeriod calculation_periods = 6;
+	// True if the coupon for this payment period is in the
+	// past; no valuation is provided for past coupons
+	 bool is_settled = 7;
+}
+
+// A stream of cashflows such as those from a Swap leg
+message CashflowStream {
+	// Indicates the type of cashflow
+	 CashflowType type = 1;
+	// The name of the forward curve used for valuation
+	 string forward_curve = 2;
+	// The name of the discount curve used for valuation
+	 string discount_curve = 3;
+	// The payment periods that are in the cashflow stream
+	repeated PaymentCalculationPeriod payment_periods = 4;
+}
+
+// Container for cashflows for a trade
+message Cashflows {
+	// trade id
+	 TradeId trade_id = 1;
+	// trade currency
+	 string currency = 2;
+	// net present value
+	 double npv = 3;
+	// 1 or 2 cashflow streams
+	repeated CashflowStream streams = 4;
+}
+
+// simple date representation
+message Date {
+	// day of month
+	 int32 day = 1;
+	// month of year (1-12)
+	 int32 month = 2;
+	// year (must be between 1900 and 2200)
+	 int32 year = 3;
+}
+
+// The value of a step in a variable notional swap
+message StepValue {
+	// The date when the step applies; must be equal to the
+	// unadjusted start date of a calculation period for the
+	// swap
+	 Date date = 1;
+	// The absolute value that applies to the period identified
+	// by date
+	 double value = 2;
+}
+
+// Trade id
+message TradeId {
+	// trade id
+	 string id = 1;
+}
+
+// List of trade ids
+message TradeIdList {
+	// Trade id
+	repeated TradeId trade_id = 1;
+}
+
+// Trade type
+enum TradeType {
+	IRS = 0;
+	OIS = 1;
+	FRA = 2;
+	VNS = 3;
+	INF = 4;
+}
+
+// The type of a swap or FRA leg
+enum LegType {
+	FIXED = 0;
+	FLOAT = 1;
+	INFLATION = 2;
+}
+
+// Stub position
+enum StubPosition {
+	// no stub position
+	NO_STUB_POSITION = 0;
+	// initial or front stub
+	FRONT = 1;
+	// final or back sub
+	BACK = 2;
+}
+
+// Stub length
+enum StubType {
+	// no stub type
+	NO_STUB_TYPE = 0;
+	// Short stub - smaller than one regular period
+	SHORT = 1;
+	// Long stub - longer than one regular period but smaller
+	// than 2 regular periods
+	LONG = 2;
+}
+
+// Roll convention
+enum RollConvention {
+	DEFAULT_ROLL_CONVENTION = 0;
+	EOM = 1;
+	IMM = 2;
+	IMMCAD = 3;
+	IMMAUD = 4;
+	IMMNZD = 5;
+	X_28 = 6;
+	X_29 = 7;
+	X_30 = 8;
+}
+
+// Compounding method
+enum CompoundingMethod {
+	NO_COMPOUNDING = 0;
+	FLAT = 1;
+	STRAIGHT = 2;
+}
+
+message PartyAccount {
+    // Party code
+     string party_code = 1;
+
+	// Account name
+	 Account account = 2;
+}
+
+// PortfolioBalanceInputSet identifies the set of participants that should be
+// included in the portfolio balancing calculation. The set must be a subset of
+// available trades, positions, sensitivities and accounts in the session.
+// <p>
+// From the OTC side at least one of account, trade id list or sensitivity list
+// must be provided.
+// <p>
+// From the Listed side at least one of account or position list must be provided
+// <p>
+message PortfolioBalanceInputSet {
+	// Account name - H for house or client account name
+	// This is an  parameter; if supplied
+	// relevant base sensitivity profile data must be
+	// available else an exception will be thrown
+	 Account otc_account = 1;
+
+	// List of trade ids specifying the trades
+	// that should be included in the simulation. The
+	// specified trades must have been previously added
+	// to the session.
+	repeated TradeId otc_trade_id = 2;
+
+	// List of sensitivity profile ids specifying the
+	// input sensitivities that should be included in the
+	// simulation. The specified sensitivities must have been
+	// previously added to the session.
+	repeated SensitivityProfileId otc_sensitivity_profile_id = 3;
+
+	// Account name for the listed counterpart
+	 PartyAccount listed_account = 4;
+
+	// List of positions specifying the listed positions
+	// that should be included in the simulation. The
+	// specified positions must have been previously added
+	// to the session.
+	repeated PositionId position_id = 5;
+
+	//  parameter to specify that the margin results must
+	// be scaled appropriately for a client account. If not
+	// specified, the default value is false
+	 bool is_client = 6;
+
+	//  name for this set
+	// Just for information purposes
+	 string name = 7;
+
+	//  IM method
+	 string im_method = 8;
+
+	//Request for otc pnl breakdown
+	 bool request_otc_pnl_breakdown = 11;
+}
+
+// Container for results obtained from an portfolio
+// balance operation
+message PortfolioBalanceResultSet {
+
+	// status of the balancing operation
+    enum Status {
+        SUCCESS = 0;
+        FAILURE = 1;
+    }
+
+    // balancing status
+     Status status = 1;
+
+    //reference to the input
+     PortfolioBalanceInputSet balance_input = 2;
+
+    // original listed positions
+    repeated ListedPosition original_position = 3;
+
+    // Margin estimate results (summary) of original otc portfolio
+     MarginEstimate original_otc_margin_estimate = 4;
+
+    //OTC original pnL vector (total losses by scenario)
+	 PnlVector original_otc_pnl_vector = 14;
+
+	//Listed original pnL vector (total losses by scenario)
+	 PnlVector original_listed_pnl_vector = 16;
+
+    // Margin estimate results (summary) of original listed portfolio
+     MarginEstimate original_listed_margin_estimate = 5;
+
+    // Positions identified for transferring to OTC portfolio
+    repeated ListedPosition transferred_position = 6;
+
+    // Positions remaining in the listed portfolio
+    repeated ListedPosition residual_position = 7;
+
+    // Margin estimate results (summary) of otc portfolio post balancing
+     MarginEstimate otc_margin_estimate = 8;
+
+    //OTC combined pnL vector (total losses by scenario) post balancing
+	 PnlVector otc_pnl_vector = 15;
+
+	//Listed pnL vector (total losses by scenario) post balancing
+	 PnlVector listed_pnl_vector = 17;
+
+    // Margin estimate results (summary) of listed portfolio post balancing
+     MarginEstimate listed_margin_estimate = 9;
+
+    //total margin prior to balancing in reporting currency
+     double original_total_margin = 10;
+
+    //final total margin including buffer margin post balancing
+    //in reporting currency
+     double total_margin = 12;
+
+    //total saving on the margin due to balancing
+    //in reporting currency
+     double total_saving = 13;
+}
+
+//represents an pnl entry against
+//a VAR scenario
+message PnlEntry {
+    // Scenario number
+     int32 scenario_number = 1;
+
+	// Scenario Date
+	 Date scenario_date = 2;
+
+	// scenario p&l
+	 double profit_and_loss = 3;
+}
+
+//represents the vector of pnl values for
+//all the VAR scenarios
+message PnlVector {
+	//represents the unique identifier for
+	//the vector which could be the underlying
+	//portfolio name or the underlying listed
+	//contract identifier
+	 string id = 1;
+
+	//represents the type of the pnl vector
+	//takes the value of PORTFOLIO when
+	//it represents the pnl of the entire portfolio
+	//takes the value of UNIT when representing
+	//the pnl for a unit listed contract
+	 string type = 2;
+
+	//PnL details by scenario
+	repeated PnlEntry entry = 3;
+}
+
+// Position id
+message PositionId {
+	// position id
+	 string id = 1;
+}
+
+//the underlying future instrument
+message ListedInstrument {
+	//identifier for the instrument
+	 string id = 6;
+	//exchange code for e.g. NLX
+	 string exchange = 1;
+	//contract id for e.g. NI for EUR STIR Futures
+	 string product_code = 2;
+	//expiration represented in year-month for e.g. 201506
+	 string expiry = 3;
+	//type of option CALL/PUT - is applicable for futures on options only
+	 OptionType option_type = 4;
+	//strike for the option - is applicable for futures on options only
+	 double strike_price = 5;
+	//trading currency
+	 string currency = 7;
+	//last trading date
+	 Date last_trading_date = 8;
+
+}
+
+//represents option type
+enum OptionType {
+	//represents a CALL option
+	CALL = 0;
+	//represents a PUT option
+	PUT = 1;
+}
+
+//the underlying future contract
+message ListedContract {
+	//exchange code for e.g. NLX
+	 string exchange = 1;
+	//contract id for e.g. NI (for EUR STIR Futures)
+	 string product_code = 2;
+	//underlying product code for e.g. 3-MONTH EURIBOR
+	 string product_description = 3;
+	//instruments
+	repeated ListedInstrument instrument = 4;
+	//eligible for portfolio balancing
+	 bool eligible_for_balancing = 5;
+}
+
+//list of ListedContract's
+message ListedContracts {
+	//future contract definition
+	repeated ListedContract entry = 1;
+}
+
+//future position
+message ListedPosition {
+
+	// the position identifier
+	// Must be unique within a session
+	 PositionId position_id = 1;
+
+	//reference to the contract
+	 ListedInstrument instrument = 2;
+
+	//size representing the no of contracts
+	//this is an unsigned value
+	 int32 long_position = 3;
+
+	//size representing the no of contracts
+	//this is an unsigned value
+	 int32 short_position = 4;
+
+	//represents the type of the position
+	 string position_type = 5;
+}
+
+// Position Profile identifier
+message PositionProfileId {
+	// id
+	 string id = 1;
+}
+
+
+// Position Profile contains the set of future
+// contract positions for the
+message PositionProfile {
+	// Unique id for the sensitivity profile
+	 PositionProfileId id = 1;
+	// Party code
+	 string party_code = 2;
+	//  account code
+	 Account account = 3;
+	// future position values
+	repeated ListedPosition position = 4;
+}
+
+// Container for position valuation results
+message PositionValuation {
+
+	// The position id
+	 PositionId position_id = 1;
+
+	//reference to the contract
+	 ListedInstrument listed_instrument = 2;
+
+	// Currency of the trade
+	 string currency = 3;
+
+	// position npv using VM curves
+	 double npv = 4;
+
+	// NPV (VM) in reporting currency
+	 double npv_reporting_currency = 5;
+
+	// Delta Gamma Sensitivity of the position
+	 SensitivityProfile im_sensitivity = 6;
+
+}
+
+// A swap or FRA trade
+message Trade {
+	// the trade identifier
+	// Must be unique within a session
+	 TradeId trade_id = 1;
+	
+	// The trade type
+	// required
+	 TradeType trade_type = 2;
+	
+	// Notional amount - must be present and must not be
+	// 0 or negative
+	 double notional = 3;
+	
+	// Currency of the trade
+	// required
+	 string currency = 4;
+	
+	// Unadjusted effective date for swaps
+	// or Adjusted effective date for FRAs
+	// required
+	 Date effective_date = 5;
+	
+	// Unadjusted termination date for swaps
+	// or Adjusted termination date for FRAs
+	// required	
+	 Date termination_date = 6;
+	
+	// Payment leg (the leg that has the party as the payer)
+	// required
+	 Leg pay_leg = 7;
+	
+	// Receive leg (the leg that has the party as the receiver)
+	// required
+	 Leg receive_leg = 8;
+	
+	//  counter party
+	 string counter_party = 9;
+	
+}
+
+
+// A swap or FRA leg
+message Leg {
+	// The leg type - fixed or float
+	 LegType leg_type = 1;
+	
+	// How often the leg pays 
+	 string payment_frequency = 2;
+	
+	// The day count convention to be applied
+	// supported values are:
+	// ACT/360
+	// ACT/365.FIXED
+	// ACT/365
+	// 30/360
+	// 30E/360
+	// ACT/ACT
+	 string day_count_fraction = 3;
+	
+	// Fixed rate in percent terms. Example 5 means 5%, .05 means .05%.
+	 double fixed_rate = 4;
+	
+	// Spread in basis points. Example 5 means 5 basis points.
+	 double spread = 5;
+	
+	// Index Name ( except for LIBOR/OIS BASIS SWAPS) 
+	// Expected full ISDA name e.g USD-Federal Funds-H.15, GBP-LIBOR-BBA
+	 string index_name = 6;
+	
+	// Index tenor - required for floating legs on swaps
+	// For FRAs, there is no need to specify unless 
+	// interpolation is desired between two specific tenors
+	// in which case two values should be specified with a
+	// forward slash in between
+	 string index_tenor = 7;
+	
+	// Compounding method
+	 CompoundingMethod compounding_method = 8;
+	
+	// specifies if a front or back stub should be generated
+	 StubPosition stub_position = 9;
+	
+	// specified if the stub should be long or short
+	 StubType stub_type = 10;
+	
+	// Roll convention - only required if the roll convention
+	// is special - i.e. EOM, IMM, IMMAUD, IMMNZD or IMMCAD
+	 RollConvention roll_convention = 11;
+	
+	//  indicator for FRAs only to turn on 
+	// interpolation 
+	 bool interpolate = 12;
+	
+	// Notional steps - for variable notional swaps only
+	// Notional may vary only at payment periods
+	// All steps must be aligned to the unadjusted start date of a calculation period
+	// Steps must be provided for each calculation period even if they do not change
+	repeated StepValue notional_step = 16;
+	
+	// Fixed rate steps - for variable notional swaps only
+	// Fixed rate may vary only at payment periods
+	// All steps must be aligned to the unadjusted start date of a calculation period
+	// Steps must be provided for each calculation period even if they do not change
+	repeated StepValue fixed_rate_step = 17;
+	
+	// Spread steps - for variable notional swaps only
+	// Spread may vary only at payment periods
+	// All steps must be aligned to the unadjusted start date of a calculation period
+	// Steps must be provided for each calculation period even if they do not change
+	repeated StepValue spread_step = 18;
+	
+	//Inflation lag in months 
+	 int32 inflation_lag = 20;
+	
+	// initial inflation index level
+	 double initial_inflation_level = 21;
+	
+	//Interpolation method
+	 InterpolationMethod inflation_interpolation_method = 22;
+	
+	// Known payment amount. 
+	// ly used instead of fixed rate 
+	// for ZC fixed legs if specified.
+	 double known_amount = 23;
+	
+	//first regular perios start date in case
+	//leg has a fron stub.
+	 Date first_regular_period_start_date = 24;
+	
+	//last regular perios end date in case
+	//leg has a back stub.
+	 Date last_regular_period_end_date = 25;
+	
+}
+
+// The interpolation method
+enum InterpolationMethod {
+	NONE = 0;
+	LINEAR = 1;
+}
+
+// FpML representation of trade
+message FpMLTrade {
+	// trade id
+	 TradeId trade_id = 1;
+	// String containing the FpML representation of the trade
+	// The FpML must contain the &lt;trade&gt; element.
+	// The supported products are swaps and FRAs as per
+	// SwapClear product specification
+	// Not all features are supported in this release
+	// This feature is new and not fully supported in this release
+	// The trade representation has been tested on FpML 5.x
+	// FpML 4.x should also be accepted but has not been tested
+	 string fpml = 2;
+	//  counter party to be used to
+	// decide payer/receiver role - if unspecified
+	// defaults to the party associated with the
+	// session
+	 string counter_party = 3;
+}
+
+// The type of delta/gamma measure
+enum MeasureType {
+	DELTA = 0;
+	GAMMA = 1;
+	CROSS_GAMMA = 2;
+}
+
+// A delta/gamma sensitivity measure
+message Sensitivity {
+	// Type of measure (delta/gamma)
+	 MeasureType type = 1;
+	// Currency of the curve
+	 string currency = 2;
+	// Index of the curve
+	 string index = 3;
+	//  field to distinguish various tenor
+	// curves on the same index e.g
+	// LIBOR 3M and LIBOR 6M and
+	// specified as 3M and 6M respectively
+	 string index_tenor = 7;
+	// curve pillar point
+	 string tenor = 4;
+	// Amount in currency
+	 double value = 5;
+	// Instead of a tenor label, a tenor date
+	// can be specified ; this must match a
+	// valid tenor date in the IM curve data
+	 Date tenor_date = 6;
+	// details of the curve if this sensitivity
+	// is associated with two curves for e.g. cross gamma
+	 CurvePoint secondary_curve = 8;
+}
+
+//represents a pillar point on a curve
+message CurvePoint {
+	// Currency of the curve
+     string currency = 1;
+	// Index of the curve
+     string index = 2;
+	//  field to distinguish various tenor
+	// curves on the same index e.g
+	// LIBOR 3M and LIBOR 6M and
+	// specified as 3M and 6M respectively
+     string index_tenor = 3;
+    // curve pillar point
+     string tenor = 4;
+}
+
+// Sensitivity Profile contains a set of Delta/
+// Gamma sensitivities
+message SensitivityProfile {
+	// Unique id for the sensitivity profile
+	 SensitivityProfileId id = 1;
+	// Party code
+	 string party_code = 2;
+	//  account code (if this is related to an account)
+	 Account account = 3;
+	//  trade id (if this is related to a trade)
+	 TradeId trade_id = 4;
+	// Sensitivity values
+	repeated Sensitivity sensitivity = 5;
+}
+
+// Sensitivity Profile identifier
+message SensitivityProfileId {
+	// id
+	 string id = 1;
+}
+
+// List of sensitivity profiles identified by their ids
+message SensitivityProfileIdList {
+	// sensitivity profile id
+	repeated SensitivityProfileId sensitivity_profile_id = 1;
+}
+
+// Container for IM estimation results
+message MarginEstimate {
+    // Reporting currency
+     string reporting_currency = 1;
+    // base initial margin estimate in reporting currency
+    // excludes all the addons
+     double initial_margin = 2;
+    // The IMM multipler as per method 1
+     double method1_initial_margin_multiplier = 3;
+    // The scenarios chosen for IM
+    repeated int32 initial_margin_scenario = 4;
+    // Currency breakdown of IM
+    repeated MarginDetail margin_detail = 5;
+    // The IMM multiplier as per method 2
+     double method2_initial_margin_multiplier = 6;
+    // Initial Margin Multiplier add-on in reporting currency
+    // Min of IMM1 and IMM2. This field is deprecated. Please
+    // use liquidity_addon_on in preference
+     double imm_add_on = 7 [deprecated = true];
+    // liquidity add on in reporting currency
+    // currently it is calculated as a Min of IMM1 and IMM2.
+     double liquidity_add_on = 12 [deprecated = true];
+    // Total IM (sum of initial_margin and imm_add_on)
+    // In reporting currency. deprecated because it doesn't
+    // include all initial margin addons. Please use total_im
+    // in preference
+     double total_initial_margin = 8 [deprecated = true];
+    // un-scaled VAR addon is the difference between the
+    // Unscaled VAR and Current IM
+     double unscaled_var_add_on = 10 [deprecated = true];
+    // basis risk add-on value. calculated from
+    // the constituents i.e. OIS, tenor and stress
+     double basis_risk_add_on = 9 [deprecated = true];
+    // total IM including all add-ons
+     double total_im = 11;
+    // all the add-ons
+    repeated MarginAddOnEstimate add_on = 13;
+    // add on due to portfolio balancing
+    // double  portfolio_margin_add_on = 14 [deprecated = true];
+}
+
+// represents the addon result for a
+// single add-on
+message MarginAddOnEstimate {
+	// represents the type of the add-on
+	 MarginAddonType add_on_type = 1;
+	// add-on as a percent of base im
+	// represented in percentage terms
+	// for e.g. 5 represents 5% or 0.05
+	 double add_on_percent = 2;
+	// add-on value in reporting currency
+	// add-on-value = (add_on_percent/100) * initial_margin
+	 double add_on_value = 3;
+}
+
+// Currency/index level breakdown of Initial Margin
+// estimate
+message MarginDetail {
+    // Currency
+     string currency = 1;
+    // Index
+     string index = 2;
+    // Reporting currency
+     string reporting_currency = 3;
+    // initial margin in reporting currency
+     double initial_margin = 4;
+    // worst case loss in reporting currency
+     double worst_case_loss = 5;
+    // net delta in reporting currency
+     double delta = 6;
+    // Scenario that is estimated to cause the worst case loss
+     int32 worst_case_loss_scenario = 7;
+    // Applicable method 2 IMM multiplier
+     double method2_initial_margin_multiplier = 8;
+    // Estimated shortfall for the currency/index
+     double estimated_shortfall = 9;
+    // Scenarios used for estimated shortfall
+    repeated int32 estimated_shortfall_scenario = 10;
+}
+
+// IM calculation for a single currency/index/scenario
+message MarginScenarioDetail {
+    // Currency
+     string currency = 1;
+    // Index
+     string index = 2;
+    // Scenario number
+     int32 scenario_number = 3;
+    // Detailed breakdown by tenor
+    repeated MarginScenarioValue value = 4;
+	// tag to distinguish different tenor curves
+	 string index_tenor = 5;
+}
+
+
+// IM breakdown by tenor
+message MarginScenarioValue {
+	// tenor
+	 string tenor = 1;
+	// delta in local ccy
+	 double delta = 2;
+	// gamma in local ccy
+	 double gamma = 3;
+	// bp shift
+	 double scenario_shift = 4;
+	// scenario p&l in local currency
+	 double profit_and_loss = 5;
+	// scenario p&L in reporting currency
+	 double profit_and_loss_reporting_currency = 6;
+	// cross gamma in local currency
+	 double cross_gamma = 7;
+}
+
+// Full breakdown of IM results by
+// currency/index/scenario/tenor
+// Designed for compactness
+message MarginBreakdown {
+    // Detailed breakdown by currency/index
+    repeated MarginIndexBreakdown index_breakdown = 1;
+    // Tenor labels for scenarios
+    repeated string tenor_label = 2;
+}
+
+// IM breakdown by currency/index
+// for all scenarios
+message MarginIndexBreakdown {
+	// Currency
+	 string currency = 1;
+	// Index
+	 string index = 2;
+	// IM breakdown by scenario
+	repeated MarginScenarioBreakdown scenario_breakdown = 3;
+	// FX spot rate
+	 double fx_spot = 4;
+}
+
+// IM breakdown by for an individual
+// scenario
+message MarginScenarioBreakdown {
+	// Scenario number
+	 int32 scenario_number = 1;
+	// Detailed breakdown by tenor
+	// Note that tenor label not supplied
+	repeated MarginScenarioValue value = 2;
+	// FX rate after shift
+	 double fx_rate_shifted = 3;
+}
+
+// IMM Level data
+message IMMLevelValue {
+	// Thresholds
+	repeated double threshold = 1;
+	// Multipliers
+	repeated double multiplier = 2;
+}
+
+// IMM Method 1 parameters
+message IMMMethod1 {
+	// thresholds and multipliers
+	 IMMLevelValue levels = 1;
+}
+
+// IMM Method 2 parameters
+message IMMMethod2 {
+	// Index name
+	 string isda_index_name = 1;
+	// thresholds and multipliers
+	 IMMLevelValue levels = 2;
+}
+
+// IMM configuration
+message IMMConfiguration {
+	// IMM method 1 parameters
+	 IMMMethod1 imm_method1 = 1;
+	// IMM method 2 parameters
+	repeated IMMMethod2 imm_method2 = 2;
+}
+
+// The greeting service definition.
+service TradeService {
+  // Sends a greeting
+  rpc GetTrades (TradeFilter) returns (TradeList) {}
+}
+
+//The pricing service definition
+service PricingService {
+    //Price a trade
+    rpc PriceTrade(Trade) returns (Trade) {}
+}
+
+// Specify a filter for trades
+message TradeFilter {
+    TradeType trade_type = 1;
+}
+
+// List of trades
+message TradeList {
+    //Trade
+    repeated Trade trade = 1;
+}
