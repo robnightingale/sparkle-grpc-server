@@ -1,0 +1,50 @@
+package com.rbccm.helloworld;
+
+import com.lchclearnet.swapclear.smart.types.*;
+import com.lchclearnet.swapclear.smart.types.TradeServiceGrpc.TradeServiceImplBase;
+import io.grpc.stub.StreamObserver;
+
+import java.util.Random;
+
+public class TradeServiceImpl extends TradeServiceGrpc.TradeServiceImplBase {
+
+    private final Random random = new Random();
+
+    @Override
+    public void getTrades(TradeFilter req, StreamObserver<TradeList> responseObserver) {
+
+        //Get the trade type
+        TradeType tradeType = req.getTradeType();
+
+        try {
+
+            TradeList.Builder tradeListBuilder = TradeList.newBuilder();
+
+            for (int i=0; i< 10; i++) {
+
+                TradeId tradeId = TradeId.newBuilder()
+                        .setId("" + i)
+                        .build();
+
+                Trade trade = Trade.newBuilder()
+                        .setTradeId(tradeId)
+                        .setTradeType(tradeType)
+                        .setNotional(1000000 * random.nextInt(8))
+                        .setCurrency("USD")
+                        .setCounterParty("ABC Inc")
+                        .build();
+
+                tradeListBuilder.addTrade(trade);
+            }
+
+            TradeList tradeList = tradeListBuilder.build();
+
+            responseObserver.onNext(tradeList);
+            responseObserver.onCompleted();
+        }
+        catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+    }
+
+}
