@@ -1,0 +1,61 @@
+package com.rbccm.helloworld;
+
+import com.lchclearnet.swapclear.smart.types.*;
+import io.grpc.stub.StreamObserver;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Random;
+
+public class PriceServiceImpl extends PricingServiceGrpc.PricingServiceImplBase {
+
+    private final DateTimeFactory dtf;
+    private final Random random = new Random();
+
+    private final double minValue = -10000000;
+    private final double maxValue = 10000000;
+
+    public PriceServiceImpl(DateTimeFactory dateTimeFactory) {
+        dtf = dateTimeFactory;
+    }
+
+    /**
+     * This is a test implementation of a pricer - simply generates random numbers
+     *
+     * @param request
+     * @param responseObserver
+     */
+    @Override
+    public void priceTrade(Trade request, StreamObserver<PnlEntry> responseObserver) {
+
+        try {
+            //Get a timestamp for today
+            LocalDateTime timestamp = dtf.getCurrentDateTime();
+
+            Date date = Date.newBuilder()
+                    .setYear(timestamp.getYear())
+                    .setMonth(timestamp.getMonthValue())
+                    .setDay(timestamp.getDayOfMonth())
+                    .build();
+
+            //Generate a P&L between the two values
+            double pnl = minValue + (maxValue - minValue) * random.nextDouble();
+
+            PnlEntry result = PnlEntry.newBuilder()
+                    .setScenarioDate(date)
+                    .setScenarioNumber(1)
+                    .setProfitAndLoss(pnl)
+                    .build();
+
+            responseObserver.onNext(result);
+            responseObserver.onCompleted();
+        }
+        catch (Throwable ex) {
+            responseObserver.onError(ex);
+        }
+
+
+
+
+    }
+}
