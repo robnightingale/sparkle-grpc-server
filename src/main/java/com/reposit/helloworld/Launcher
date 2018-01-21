@@ -1,0 +1,38 @@
+package com.rbccm.helloworld;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
+/**
+ * The entry-point into the application - picks up environment variables that we need
+ * to configure the application
+ */
+public class Launcher {
+
+    public static void main(String[] args) {
+
+        try {
+            Config conf = ConfigFactory.systemEnvironment();
+
+            //Grab the port that we should be listening on
+            int serverPort = conf.getInt("SERVER_PORT");
+
+            HelloMessageGenerator messageGenerator = new HelloMessageGenerator(new DateTimeFactory(), new LocalHostNameFactory());
+            HelloWorldServiceImpl helloWorldService = new HelloWorldServiceImpl(messageGenerator);
+            TradeServiceImpl tradeService = new TradeServiceImpl();
+            PriceServiceImpl priceService = new PriceServiceImpl(new DateTimeFactory());
+
+            SparkleServer server = new SparkleServer(serverPort, helloWorldService, tradeService, priceService);
+            server.start();
+            server.blockUntilShutdown();
+        }
+        catch (Exception ex) {
+            System.err.println("Error running server " + ex.getMessage());
+            ex.printStackTrace();
+
+            System.exit(-1);
+        }
+    }
+
+
+}
